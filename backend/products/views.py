@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import  authentication ,generics, mixins, permissions
+from rest_framework import generics, mixins
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -7,6 +7,7 @@ from .serializers import ProductSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import Http404
+from api.mixins import StaffEditorPermissionsMixin
 
 """
 Lista de todos os APIViews e suas funções
@@ -22,26 +23,24 @@ etc...
 """
 
 
-class ProductListCreateAPIView(generics.ListCreateAPIView):
+class ProductListCreateAPIView(StaffEditorPermissionsMixin, generics.ListCreateAPIView):
     queryset = Product.objects.all() 
     serializer_class = ProductSerializer
-    authentication_classes = [authentication.SessionAuthentication]
-    permission_classes = [permissions.DjangoModelPermissions]
 
     #perform_create serve para fazer validações antes de salvar o objeto
     def perform_create(self, serializer):
-        title = serializer.validate_data.get('title')
-        content = serializer.validate_data.get('content') or None
+        title = serializer.validated_data.get('title')
+        content = serializer.validated_data.get('content') or None
 
         if content is None:
             content = title
-        serializer.save()
+        serializer.save(content=content)
 
 product_list_create_view = ProductListCreateAPIView.as_view()
 
 
 
-class ProductDetailAPIView(generics.RetrieveAPIView):
+class ProductDetailAPIView(StaffEditorPermissionsMixin, generics.RetrieveAPIView):
     queryset = Product.objects.all() #Get the  query
     serializer_class = ProductSerializer
 
@@ -49,7 +48,7 @@ product_detail_view = ProductDetailAPIView.as_view()
 
 
 
-class ProductUpdateAPIView(generics.UpdateAPIView):
+class ProductUpdateAPIView(StaffEditorPermissionsMixin, generics.UpdateAPIView):
     queryset = Product.objects.all() #Get the  query
     serializer_class = ProductSerializer
     lookup_field = 'pk'
@@ -68,7 +67,7 @@ product_update_view = ProductUpdateAPIView.as_view()
 
 
 
-class ProductDestroyAPIView(generics.DestroyAPIView):
+class ProductDestroyAPIView(StaffEditorPermissionsMixin, generics.DestroyAPIView):
     queryset = Product.objects.all() #Get the  query
     serializer_class = ProductSerializer
     lookup_field = 'pk'
@@ -151,6 +150,7 @@ def product_alt_view(request, pk=None ,*args, **kwargs):
 
         if serializer.is_valid(raise_exception=True): # raize_exception --> Validator de required fields
 
+            email = serializer.validated_data.pop('email')
             title = serializer.validated_data.get('title')
             content = serializer.validated_data.get('content') or None
 
